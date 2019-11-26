@@ -465,9 +465,11 @@ static int trx_rf_lock(struct gsm_bts_trx *trx, int locked, l1if_compl_cb *cb)
 	return l1if_mute_rf(fl1h, mute, cb);
 }
 
-int oml_mo_rf_lock_chg(struct gsm_abis_mo *mo, uint8_t mute_state[8],
+int oml_mo_rf_lock_chg(struct gsm_bts_trx *trx, uint8_t mute_state[8],
 		       int success)
 {
+	struct gsm_abis_mo *mo = &trx->mo;
+
 	if (success) {
 		int i;
 		int is_locked = 1;
@@ -476,8 +478,17 @@ int oml_mo_rf_lock_chg(struct gsm_abis_mo *mo, uint8_t mute_state[8],
 			if (!mute_state[i])
 				is_locked = 0;
 
+		/* Don't change av-/opstate before initial OPSTART */
+		if (trx->rsl_link) {
+			mo->nm_state.operational =
+				is_locked ? NM_OPSTATE_DISABLED : NM_OPSTATE_ENABLED;
+			mo->nm_state.availability =
+				is_locked ? NM_AVSTATE_OFF_LINE : NM_AVSTATE_OK;
+		}
+
 		mo->nm_state.administrative =
 			is_locked ? NM_STATE_LOCKED : NM_STATE_UNLOCKED;
+
 		mo->procedure_pending = 0;
 		return oml_mo_statechg_ack(mo);
 	} else {

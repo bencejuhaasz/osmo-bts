@@ -1371,14 +1371,14 @@ static int mute_rf_compl_cb(struct gsm_bts_trx *trx, struct msgb *resp,
 	if (status != GsmL1_Status_Success) {
 		LOGP(DL1C, LOGL_ERROR, "Rx RF-MUTE.conf with status %s\n",
 		     get_value_string(femtobts_l1status_names, status));
-		oml_mo_rf_lock_chg(&trx->mo, fl1h->last_rf_mute, 0);
+		oml_mo_rf_lock_chg(trx, fl1h->last_rf_mute, 0);
 	} else {
 		int i;
 
 		LOGP(DL1C, LOGL_INFO, "Rx RF-MUTE.conf with status=%s\n",
 		     get_value_string(femtobts_l1status_names, status));
 		bts_update_status(BTS_STATUS_RF_MUTE, fl1h->last_rf_mute[0]);
-		oml_mo_rf_lock_chg(&trx->mo, fl1h->last_rf_mute, 1);
+		oml_mo_rf_lock_chg(trx, fl1h->last_rf_mute, 1);
 
 		osmo_static_assert(
 			ARRAY_SIZE(trx->ts) >= ARRAY_SIZE(fl1h->last_rf_mute),
@@ -1411,7 +1411,7 @@ int l1if_mute_rf(struct femtol1_hdl *hdl, uint8_t mute[8], l1if_compl_cb *cb)
 	/* always acknowledge an un-MUTE (which is a no-op if MUTE is not supported */
 	if (!memcmp(mute, unmuted, ARRAY_SIZE(unmuted))) {
 		bts_update_status(BTS_STATUS_RF_MUTE, mute[0]);
-		oml_mo_rf_lock_chg(&trx->mo, mute, 1);
+		oml_mo_rf_lock_chg(trx, mute, 1);
 		for (i = 0; i < ARRAY_SIZE(unmuted); ++i)
 			mute_handle_ts(&trx->ts[i], mute[i]);
 		return 0;

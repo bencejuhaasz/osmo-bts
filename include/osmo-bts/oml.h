@@ -27,7 +27,7 @@ int oml_mo_state_chg(struct gsm_abis_mo *mo, int op_state, int avail_state);
 void oml_mo_state_init(struct gsm_abis_mo *mo, int op_state, int avail_state);
 
 /* Update admin state and send ACK/NACK */
-int oml_mo_rf_lock_chg(struct gsm_abis_mo *mo, uint8_t mute_state[8],
+int oml_mo_rf_lock_chg(struct gsm_bts_trx *mo, uint8_t mute_state[8],
 		       int success);
 
 /* Transmit STATE CHG REP even if there was no state change */
