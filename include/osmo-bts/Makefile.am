@@ -29,4 +29,6 @@ noinst_HEADERS = \
 	ta_control.h \
 	nm_bts_sm_fsm.h \
 	nm_bts_fsm.h \
+	nm_bb_transc_fsm.h \
+	nm_radio_carrier_fsm.h \
 	$(NULL)

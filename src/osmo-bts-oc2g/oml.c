@@ -26,6 +26,7 @@
 
 #include <osmocom/core/talloc.h>
 #include <osmocom/core/utils.h>
+#include <osmocom/core/fsm.h>
 
 #include <nrw/oc2g/gsml1prim.h>
 #include <nrw/oc2g/gsml1const.h>
@@ -44,6 +45,8 @@
 #include <osmo-bts/l1sap.h>
 #include <osmo-bts/nm_bts_sm_fsm.h>
 #include <osmo-bts/nm_bts_fsm.h>
+#include <osmo-bts/nm_radio_carrier_fsm.h>
+#include <osmo-bts/nm_bb_transc_fsm.h>
 
 #include "l1_if.h"
 #include "oc2gbts.h"
@@ -271,30 +274,27 @@ static int opstart_compl(struct gsm_abis_mo *mo, struct msgb *l1_msg)
 	GsmL1_Prim_t *l1p = msgb_l1prim(l1_msg);
 	GsmL1_Status_t status = prim_status(l1p);
 	struct gsm_bts_trx *trx = gsm_bts_trx_num(mo->bts, mo->obj_inst.trx_nr);
-	uint8_t tn;
 
 	if (status != GsmL1_Status_Success) {
 		LOGP(DL1C, LOGL_ERROR, "Rx %s, status: %s\n",
 			get_value_string(oc2gbts_l1prim_names, l1p->id),
 			get_value_string(oc2gbts_l1status_names, status));
 		msgb_free(l1_msg);
-		return oml_mo_opstart_nack(mo, NM_NACK_CANT_PERFORM);
+		if (mo->obj_class == NM_OC_RADIO_CARRIER)
+			return osmo_fsm_inst_dispatch(trx->rc.fi, NM_RCARRIER_EV_OPSTART_NACK,
+						      (void*)(intptr_t)NM_NACK_CANT_PERFORM);
+		else
+			return oml_mo_opstart_nack(mo, NM_NACK_CANT_PERFORM);
 	}
 
 	msgb_free(l1_msg);
 
+	/* We already have a FSM for Radio Carrier, handle it there */
+	if (mo->obj_class == NM_OC_RADIO_CARRIER)
+		return osmo_fsm_inst_dispatch(trx->rc.fi, NM_RCARRIER_EV_OPSTART_ACK, NULL);
+
 	/* Set to Operational State: Enabled */
 	oml_mo_state_chg(mo, NM_OPSTATE_ENABLED, NM_AVSTATE_OK);
-
-	if (mo->obj_class == NM_OC_RADIO_CARRIER) {
-		/* Mark Dependency TS as Offline (ready to be Opstarted) */
-		for (tn = 0; tn < TRX_NR_TS; tn++) {
-			if (trx->ts[tn].mo.nm_state.operational == NM_OPSTATE_DISABLED &&
-			    trx->ts[tn].mo.nm_state.availability ==  NM_AVSTATE_DEPENDENCY) {
-				oml_mo_state_chg(&trx->ts[tn].mo, NM_OPSTATE_DISABLED, NM_AVSTATE_OFF_LINE);
-			}
-		}
-	}
 
 	/* ugly hack to auto-activate all SAPIs for the BCCH/CCCH on TS0 */
 	if (mo->obj_class == NM_OC_CHANNEL && mo->obj_inst.trx_nr == 0 &&
@@ -365,7 +365,7 @@ static int trx_init_compl_cb(struct gsm_bts_trx *trx, struct msgb *l1_msg,
 	fl1h->hLayer1 = ic->hLayer1;
 
 	/* If the TRX was already locked the MphInit would have undone it */
-	if (trx->mo.nm_state.administrative == NM_STATE_LOCKED)
+	if (trx->rc.mo.nm_state.administrative == NM_STATE_LOCKED)
 		trx_rf_lock(trx, 1, trx_mute_on_init_cb);
 
 	/* apply initial values for Tx power backoff for 8-PSK */
@@ -387,7 +387,7 @@ static int trx_init_compl_cb(struct gsm_bts_trx *trx, struct msgb *l1_msg,
 	/* Begin to ramp up the power */
 	power_ramp_start(trx, get_p_target_mdBm(trx, 0), 0, NULL);
 
-	return opstart_compl(&trx->mo, l1_msg);
+	return opstart_compl(&trx->rc.mo, l1_msg);
 }
 
 int gsm_abis_mo_check_attr(const struct gsm_abis_mo *mo, const uint8_t *attr_ids,
@@ -416,12 +416,12 @@ static int trx_init(struct gsm_bts_trx *trx)
 	GsmL1_DeviceParam_t *dev_par;
 	int rc, oc2g_band;
 
-	if (!gsm_abis_mo_check_attr(&trx->mo, trx_rqd_attr,
+	if (!gsm_abis_mo_check_attr(&trx->rc.mo, trx_rqd_attr,
 				    ARRAY_SIZE(trx_rqd_attr))) {
 		/* HACK: spec says we need to decline, but openbsc
 		 * doesn't deal with this very well */
-		return oml_mo_opstart_ack(&trx->mo);
-		//return oml_mo_opstart_nack(&trx->mo, NM_NACK_CANT_PERFORM);
+		return oml_mo_opstart_ack(&trx->rc.mo);
+		//return oml_mo_opstart_nack(&trx->rc.mo, NM_NACK_CANT_PERFORM);
 	}
 
 	/* Update TRX band */
@@ -1895,6 +1895,7 @@ int bts_model_apply_oml(struct gsm_bts *bts, struct msgb *msg,
 int bts_model_opstart(struct gsm_bts *bts, struct gsm_abis_mo *mo,
 		      void *obj)
 {
+	struct gsm_bts_trx* trx;
 	int rc;
 
 	switch (mo->obj_class) {
@@ -1909,12 +1910,16 @@ int bts_model_opstart(struct gsm_bts *bts, struct gsm_abis_mo *mo,
 		oml_mo_state_chg(&bts->gprs.nsvc[0].mo, -1, NM_AVSTATE_OK);
 		break;
 	case NM_OC_RADIO_CARRIER:
-		rc = trx_init(obj);
+		trx = (struct gsm_bts_trx *) obj;
+		rc = trx_init(trx);
+		break;
+	case NM_OC_BASEB_TRANSC:
+		trx = (struct gsm_bts_trx *) obj;
+		rc = osmo_fsm_inst_dispatch(trx->bb_transc.fi, NM_BBTRANSC_EV_OPSTART_ACK, NULL);
 		break;
 	case NM_OC_CHANNEL:
 		rc = ts_opstart(obj);
 		break;
-	case NM_OC_BASEB_TRANSC:
 	case NM_OC_GPRS_NSE:
 	case NM_OC_GPRS_CELL:
 	case NM_OC_GPRS_NSVC:

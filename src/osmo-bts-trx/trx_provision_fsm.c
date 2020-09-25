@@ -279,7 +279,7 @@ static void st_open_poweroff_on_enter(struct osmo_fsm_inst *fi, uint32_t prev_st
 	l1h->config.trxd_hdr_ver_req = pinst->phy_link->u.osmotrx.trxd_hdr_ver_max;
 
 	/* Apply initial RFMUTE state */
-	trx_if_cmd_rfmute(l1h, pinst->trx->mo.nm_state.administrative != NM_STATE_UNLOCKED);
+	trx_if_cmd_rfmute(l1h, pinst->trx->rc.mo.nm_state.administrative != NM_STATE_UNLOCKED);
 }
 
 static void st_open_poweroff(struct osmo_fsm_inst *fi, uint32_t event, void *data)
@@ -437,7 +437,7 @@ static void st_open_wait_power_cnf(struct osmo_fsm_inst *fi, uint32_t event, voi
 
 			/* Begin to ramp up the power on all TRX associated with this phy */
 			llist_for_each_entry(pinst, &plink->instances, list) {
-				if (pinst->trx->mo.nm_state.administrative == NM_STATE_UNLOCKED)
+				if (pinst->trx->rc.mo.nm_state.administrative == NM_STATE_UNLOCKED)
 					l1if_trx_start_power_ramp(pinst->trx, NULL);
 			}
 

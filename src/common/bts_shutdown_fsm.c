@@ -46,7 +46,7 @@ static unsigned int count_trx_operational(struct gsm_bts *bts) {
 	unsigned int count = 0;
 	struct gsm_bts_trx *trx;
 	llist_for_each_entry(trx, &bts->trx_list, list) {
-		if (trx->mo.nm_state.operational == NM_OPSTATE_ENABLED)
+		if (trx->rc.mo.nm_state.operational == NM_OPSTATE_ENABLED)
 			count++;
 	}
 	return count;
@@ -83,7 +83,7 @@ static void st_wait_ramp_down_compl_on_enter(struct osmo_fsm_inst *fi, uint32_t 
 	struct gsm_bts_trx *trx;
 
 	llist_for_each_entry(trx, &bts->trx_list, list) {
-		if (trx->mo.nm_state.operational != NM_OPSTATE_ENABLED)
+		if (trx->rc.mo.nm_state.operational != NM_OPSTATE_ENABLED)
 			continue;
 		power_ramp_start(trx, to_mdB(BTS_SHUTDOWN_POWER_RAMP_TGT), 1, ramp_down_compl_cb);
 	}
@@ -101,7 +101,7 @@ static void st_wait_ramp_down_compl(struct osmo_fsm_inst *fi, uint32_t event, vo
 		src_trx = (struct gsm_bts_trx *)data;
 
 		llist_for_each_entry(trx, &bts->trx_list, list) {
-			if (trx->mo.nm_state.operational == NM_OPSTATE_ENABLED &&
+			if (trx->rc.mo.nm_state.operational == NM_OPSTATE_ENABLED &&
 			    trx->power_params.p_total_cur_mdBm > BTS_SHUTDOWN_POWER_RAMP_TGT)
 				remaining++;
 		}

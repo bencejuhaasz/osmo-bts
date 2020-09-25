@@ -712,26 +712,26 @@ static int oml_rx_set_radio_attr(struct gsm_bts_trx *trx, struct msgb *msg)
 
 	rc = oml_tlv_parse(&tp, foh->data, msgb_l3len(msg) - sizeof(*foh));
 	if (rc < 0) {
-		oml_tx_failure_event_rep(&trx->mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UNSUP_ATTR,
+		oml_tx_failure_event_rep(&trx->rc.mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UNSUP_ATTR,
 					 "New value for Set Radio Attribute not"
 					 " supported");
 		return oml_fom_ack_nack(msg, NM_NACK_INCORR_STRUCT);
 	}
 
 	/* merge existing BTS attributes with new attributes */
-	tp_merged = osmo_tlvp_copy(trx->mo.nm_attr, trx->bts);
+	tp_merged = osmo_tlvp_copy(trx->rc.mo.nm_attr, trx->bts);
 	osmo_tlvp_merge(tp_merged, &tp);
 
 	/* Ask BTS driver to validate new merged attributes */
-	rc = bts_model_check_oml(trx->bts, foh->msg_type, trx->mo.nm_attr, tp_merged, trx);
+	rc = bts_model_check_oml(trx->bts, foh->msg_type, trx->rc.mo.nm_attr, tp_merged, trx);
 	if (rc < 0) {
 		talloc_free(tp_merged);
 		return oml_fom_ack_nack(msg, -rc);
 	}
 
 	/* Success: replace old BTS attributes with new */
-	talloc_free(trx->mo.nm_attr);
-	trx->mo.nm_attr = tp_merged;
+	talloc_free(trx->rc.mo.nm_attr);
+	trx->rc.mo.nm_attr = tp_merged;
 
 	/* ... and actually still parse them */
 
@@ -1060,7 +1060,7 @@ static inline bool report_bts_number_incorrect(struct gsm_bts *bts, const struct
 	if (foh->obj_inst.bts_nr != 0 && foh->obj_inst.bts_nr != 0xff) {
 		trx = gsm_bts_trx_num(bts, foh->obj_inst.trx_nr);
 		if (trx)
-			mo = &trx->mo;
+			mo = &trx->rc.mo;
 		oml_tx_failure_event_rep(mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UKWN_MSG, form,
 					 foh->obj_inst.bts_nr,
 					 get_value_string(abis_nm_msgtype_names, foh->msg_type));
@@ -1082,7 +1082,7 @@ static int down_fom(struct gsm_bts *bts, struct msgb *msg)
 	if (msgb_l2len(msg) < sizeof(*foh)) {
 		trx = gsm_bts_trx_num(bts, foh->obj_inst.trx_nr);
 		if (trx)
-			mo = &trx->mo;
+			mo = &trx->rc.mo;
 		oml_tx_failure_event_rep(mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UKWN_MSG,
 					 "Formatted O&M message too short");
 		return -EIO;
@@ -1138,7 +1138,7 @@ static int down_fom(struct gsm_bts *bts, struct msgb *msg)
 	default:
 		trx = gsm_bts_trx_num(bts, foh->obj_inst.trx_nr);
 		if (trx)
-			mo = &trx->mo;
+			mo = &trx->rc.mo;
 		oml_tx_failure_event_rep(mo, NM_SEVER_MINOR, OSMO_EVT_MAJ_UKWN_MSG,
 					 "unknown Formatted O&M msg_type 0x%02x", foh->msg_type);
 		ret = oml_fom_ack_nack(msg, NM_NACK_MSGTYPE_INVAL);
@@ -1427,7 +1427,7 @@ static int down_mom(struct gsm_bts *bts, struct msgb *msg)
 	default:
 		trx = gsm_bts_trx_num(bts, foh->obj_inst.trx_nr);
 		if (trx)
-			mo = &trx->mo;
+			mo = &trx->rc.mo;
 		oml_tx_failure_event_rep(mo, NM_SEVER_MINOR, OSMO_EVT_MAJ_UKWN_MSG,
 					 "unknown Manufacturer O&M msg_type 0x%02x", foh->msg_type);
 		ret = oml_fom_ack_nack(msg, NM_NACK_MSGTYPE_INVAL);
@@ -1535,7 +1535,7 @@ gsm_objclass2mo(struct gsm_bts *bts, uint8_t obj_class,
 			return NULL;
 		}
 		trx = gsm_bts_trx_num(bts, obj_inst->trx_nr);
-		mo = &trx->mo;
+		mo = &trx->rc.mo;
 		break;
 	case NM_OC_BASEB_TRANSC:
 		if (obj_inst->trx_nr >= bts->num_trx) {
@@ -1609,7 +1609,7 @@ gsm_objclass2obj(struct gsm_bts *bts, uint8_t obj_class,
 			return NULL;
 		}
 		trx = gsm_bts_trx_num(bts, obj_inst->trx_nr);
-		obj = &trx->bb_transc;
+		obj = trx;
 		break;
 	case NM_OC_CHANNEL:
 		if (obj_inst->trx_nr >= bts->num_trx) {

@@ -39,6 +39,8 @@ libbts_a_SOURCES = \
 	ta_control.c \
 	nm_bts_sm_fsm.c \
 	nm_bts_fsm.c \
+	nm_bb_transc_fsm.c \
+	nm_radio_carrier_fsm.c \
 	$(NULL)
 
 libl1sched_a_SOURCES = scheduler.c

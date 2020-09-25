@@ -2,6 +2,20 @@
 
 #include <osmo-bts/gsm_data.h>
 
+struct nm_rcarrier {
+	/* NM Radio Carrier FSM */
+	struct osmo_fsm_inst *fi;
+	bool opstart_success; /* OPSTART went OK in lower layers and was acked */
+	struct gsm_abis_mo mo;
+};
+
+struct nm_bb_transc {
+	/* NM Baseband Transciever FSM */
+	struct osmo_fsm_inst *fi;
+	bool opstart_success; /* OPSTART went OK in lower layers and was acked */
+	struct gsm_abis_mo mo;
+};
+
 /* One TRX in a BTS */
 struct gsm_bts_trx {
 	/* list header in bts->trx_list */
@@ -16,10 +30,9 @@ struct gsm_bts_trx {
 	uint8_t rsl_tei;
 	struct e1inp_sign_link *rsl_link;
 
-	struct gsm_abis_mo mo;
-	struct {
-		struct gsm_abis_mo mo;
-	} bb_transc;
+	/* NM Radio Carrier and Baseband Transciever */
+	struct nm_rcarrier rc;
+	struct nm_bb_transc bb_transc;
 
 	uint16_t arfcn;
 	int nominal_power;		/* in dBm */

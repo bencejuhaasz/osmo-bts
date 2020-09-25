@@ -974,7 +974,7 @@ static void trx_dump_vty(struct vty *vty, const struct gsm_bts_trx *trx)
 		trx->nominal_power, trx->max_power_red,
 		trx->nominal_power - trx->max_power_red, VTY_NEWLINE);
 	vty_out(vty, "  NM State: ");
-	net_dump_nmstate(vty, &trx->mo.nm_state);
+	net_dump_nmstate(vty, &trx->rc.mo.nm_state);
 	vty_out(vty, "  RSL State: %s%s", trx->rsl_link? "connected" : "disconnected", VTY_NEWLINE);
 	vty_out(vty, "  Baseband Transceiver NM State: ");
 	net_dump_nmstate(vty, &trx->bb_transc.mo.nm_state);

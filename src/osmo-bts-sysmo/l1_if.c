@@ -51,6 +51,8 @@
 #include <osmo-bts/msg_utils.h>
 #include <osmo-bts/dtx_dl_amr_fsm.h>
 #include <osmo-bts/tx_power.h>
+#include <osmo-bts/nm_radio_carrier_fsm.h>
+#include <osmo-bts/nm_bb_transc_fsm.h>
 
 #include <sysmocom/femtobts/superfemto.h>
 #include <sysmocom/femtobts/gsml1prim.h>
@@ -1240,17 +1242,15 @@ static int activate_rf_compl_cb(struct gsm_bts_trx *trx, struct msgb *resp,
 			bts_update_status(BTS_STATUS_RF_ACTIVE, 1);
 
 		/* signal availability */
-		oml_mo_state_chg(&trx->mo, NM_OPSTATE_DISABLED, NM_AVSTATE_OK);
-		oml_mo_tx_sw_act_rep(&trx->mo);
-		oml_mo_state_chg(&trx->bb_transc.mo, -1, NM_AVSTATE_OK);
-		oml_mo_tx_sw_act_rep(&trx->bb_transc.mo);
+		osmo_fsm_inst_dispatch(trx->rc.fi, NM_RCARRIER_EV_SW_ACT, NULL);
+		osmo_fsm_inst_dispatch(trx->bb_transc.fi, NM_BBTRANSC_EV_SW_ACT, NULL);
 
 		for (i = 0; i < ARRAY_SIZE(trx->ts); i++)
 			oml_mo_state_chg(&trx->ts[i].mo, NM_OPSTATE_DISABLED, NM_AVSTATE_DEPENDENCY);
 	} else {
 		bts_update_status(BTS_STATUS_RF_ACTIVE, 0);
-		oml_mo_state_chg(&trx->mo, NM_OPSTATE_DISABLED, NM_AVSTATE_OFF_LINE);
-		oml_mo_state_chg(&trx->bb_transc.mo, NM_OPSTATE_DISABLED, NM_AVSTATE_OFF_LINE);
+		osmo_fsm_inst_dispatch(trx->rc.fi, NM_RCARRIER_EV_DISABLE, NULL);
+		osmo_fsm_inst_dispatch(trx->bb_transc.fi, NM_BBTRANSC_EV_DISABLE, NULL);
 	}
 
 	msgb_free(resp);
@@ -1384,14 +1384,14 @@ static int mute_rf_compl_cb(struct gsm_bts_trx *trx, struct msgb *resp,
 	if (status != GsmL1_Status_Success) {
 		LOGP(DL1C, LOGL_ERROR, "Rx RF-MUTE.conf with status %s\n",
 		     get_value_string(femtobts_l1status_names, status));
-		oml_mo_rf_lock_chg(&trx->mo, fl1h->last_rf_mute, 0);
+		oml_mo_rf_lock_chg(&trx->rc.mo, fl1h->last_rf_mute, 0);
 	} else {
 		int i;
 
 		LOGP(DL1C, LOGL_INFO, "Rx RF-MUTE.conf with status=%s\n",
 		     get_value_string(femtobts_l1status_names, status));
 		bts_update_status(BTS_STATUS_RF_MUTE, fl1h->last_rf_mute[0]);
-		oml_mo_rf_lock_chg(&trx->mo, fl1h->last_rf_mute, 1);
+		oml_mo_rf_lock_chg(&trx->rc.mo, fl1h->last_rf_mute, 1);
 
 		osmo_static_assert(
 			ARRAY_SIZE(trx->ts) >= ARRAY_SIZE(fl1h->last_rf_mute),
@@ -1424,7 +1424,7 @@ int l1if_mute_rf(struct femtol1_hdl *hdl, uint8_t mute[8], l1if_compl_cb *cb)
 	/* always acknowledge an un-MUTE (which is a no-op if MUTE is not supported */
 	if (!memcmp(mute, unmuted, ARRAY_SIZE(unmuted))) {
 		bts_update_status(BTS_STATUS_RF_MUTE, mute[0]);
-		oml_mo_rf_lock_chg(&trx->mo, mute, 1);
+		oml_mo_rf_lock_chg(&trx->rc.mo, mute, 1);
 		for (i = 0; i < ARRAY_SIZE(unmuted); ++i)
 			mute_handle_ts(&trx->ts[i], mute[i]);
 		return 0;

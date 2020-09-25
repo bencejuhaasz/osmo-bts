@@ -2125,7 +2125,7 @@ static int rsl_rx_ipac_XXcx(struct msgb *msg)
 								OSMO_RTP_F_POLL);
 		if (!lchan->abis_ip.rtp_socket) {
 			LOGPLCHAN(lchan, DRTP, LOGL_ERROR, "IPAC Failed to create RTP/RTCP sockets\n");
-			oml_tx_failure_event_rep(&lchan->ts->trx->mo,
+			oml_tx_failure_event_rep(&lchan->ts->trx->rc.mo,
 						 NM_SEVER_MINOR, OSMO_EVT_CRIT_RTP_TOUT,
 						 "%s IPAC Failed to create RTP/RTCP sockets",
 						 gsm_lchan_name(lchan));
@@ -2162,7 +2162,7 @@ static int rsl_rx_ipac_XXcx(struct msgb *msg)
 		rc = bind_rtp(bts, lchan->abis_ip.rtp_socket, ipstr);
 		if (rc < 0) {
 			LOGPLCHAN(lchan, DRTP, LOGL_ERROR, "IPAC Failed to bind RTP/RTCP sockets\n");
-			oml_tx_failure_event_rep(&lchan->ts->trx->mo,
+			oml_tx_failure_event_rep(&lchan->ts->trx->rc.mo,
 						 NM_SEVER_MINOR, OSMO_EVT_CRIT_RTP_TOUT,
 						 "%s IPAC Failed to bind RTP/RTCP sockets",
 						 gsm_lchan_name(lchan));

@@ -146,7 +146,7 @@ static void info_ind_fill_fhp(struct gsm_pcu_if_info_trx_ts *ts_info,
 
 	llist_for_each_entry(trx, &bts->trx_list, list) {
 		/* Skip non-provisioned transceivers */
-		if (trx->mo.nm_attr == NULL) {
+		if (trx->rc.mo.nm_attr == NULL) {
 			LOGPTRX(trx, DPCU, LOGL_NOTICE, "not (yet) provisioned\n");
 			continue;
 		}
@@ -200,11 +200,11 @@ static void info_ind_fill_trx(struct gsm_pcu_if_info_trx *trx_info,
 	trx_info->arfcn = trx->arfcn;
 	trx_info->hlayer1 = trx_get_hlayer1(trx);
 
-	if (trx->mo.nm_state.operational != NM_OPSTATE_ENABLED ||
-	    trx->mo.nm_state.administrative != NM_STATE_UNLOCKED) {
+	if (trx->rc.mo.nm_state.operational != NM_OPSTATE_ENABLED ||
+	    trx->rc.mo.nm_state.administrative != NM_STATE_UNLOCKED) {
 		LOGPTRX(trx, DPCU, LOGL_INFO, "unavailable for PCU (op=%s adm=%s)\n",
-		    abis_nm_opstate_name(trx->mo.nm_state.operational),
-		    abis_nm_admin_name(trx->mo.nm_state.administrative));
+		    abis_nm_opstate_name(trx->rc.mo.nm_state.operational),
+		    abis_nm_admin_name(trx->rc.mo.nm_state.administrative));
 		return;
 	}
 
