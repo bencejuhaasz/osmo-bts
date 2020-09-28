@@ -30,6 +30,7 @@
 #include <osmo-bts/phy_link.h>
 #include <osmo-bts/nm_radio_carrier_fsm.h>
 #include <osmo-bts/nm_bb_transc_fsm.h>
+#include <osmo-bts/nm_channel_fsm.h>
 
 struct gsm_bts_trx *gsm_bts_trx_alloc(struct gsm_bts *bts)
 {
@@ -65,7 +66,11 @@ struct gsm_bts_trx *gsm_bts_trx_alloc(struct gsm_bts *bts)
 		ts->dyn.pchan_want = GSM_PCHAN_NONE;
 		ts->tsc = -1;
 
-		gsm_mo_init(&ts->mo, bts, NM_OC_CHANNEL,
+		ts->nm_chan.fi = osmo_fsm_inst_alloc(&nm_chan_fsm, trx, ts,
+						     LOGL_INFO, NULL);
+		osmo_fsm_inst_update_id_f(ts->nm_chan.fi, "bts%d-trx%d-ts%d",
+					  bts->nr, trx->nr, ts->nr);
+		gsm_mo_init(&ts->nm_chan.mo, bts, NM_OC_CHANNEL,
 			    bts->nr, trx->nr, ts->nr);
 
 		for (l = 0; l < TS_MAX_LCHAN; l++) {

@@ -880,7 +880,7 @@ static int oml_rx_set_chan_attr(struct gsm_bts_trx_ts *ts, struct msgb *msg)
 
 	rc = oml_tlv_parse(&tp, foh->data, msgb_l3len(msg) - sizeof(*foh));
 	if (rc < 0) {
-		oml_tx_failure_event_rep(&ts->mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UNSUP_ATTR,
+		oml_tx_failure_event_rep(&ts->nm_chan.mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UNSUP_ATTR,
 					 "New value for Set Channel Attribute not supported");
 		return oml_fom_ack_nack(msg, NM_NACK_INCORR_STRUCT);
 	}
@@ -927,11 +927,11 @@ static int oml_rx_set_chan_attr(struct gsm_bts_trx_ts *ts, struct msgb *msg)
 	}
 
 	/* merge existing BTS attributes with new attributes */
-	tp_merged = osmo_tlvp_copy(ts->mo.nm_attr, bts);
+	tp_merged = osmo_tlvp_copy(ts->nm_chan.mo.nm_attr, bts);
 	osmo_tlvp_merge(tp_merged, &tp);
 
 	/* Call into BTS driver to check attribute values */
-	rc = bts_model_check_oml(bts, foh->msg_type, ts->mo.nm_attr, tp_merged, ts);
+	rc = bts_model_check_oml(bts, foh->msg_type, ts->nm_chan.mo.nm_attr, tp_merged, ts);
 	if (rc < 0) {
 		LOGPFOH(DOML, LOGL_ERROR, foh, "SET CHAN ATTR: invalid attribute value, rc=%d\n", rc);
 		talloc_free(tp_merged);
@@ -940,8 +940,8 @@ static int oml_rx_set_chan_attr(struct gsm_bts_trx_ts *ts, struct msgb *msg)
 	}
 
 	/* Success: replace old BTS attributes with new */
-	talloc_free(ts->mo.nm_attr);
-	ts->mo.nm_attr = tp_merged;
+	talloc_free(ts->nm_chan.mo.nm_attr);
+	ts->nm_chan.mo.nm_attr = tp_merged;
 
 	/* 9.4.13 Channel Combination */
 	if (TLVP_PRES_LEN(&tp, NM_ATT_CHAN_COMB, 1)) {
@@ -1551,7 +1551,7 @@ gsm_objclass2mo(struct gsm_bts *bts, uint8_t obj_class,
 		trx = gsm_bts_trx_num(bts, obj_inst->trx_nr);
 		if (obj_inst->ts_nr >= TRX_NR_TS)
 			return NULL;
-		mo = &trx->ts[obj_inst->ts_nr].mo;
+		mo = &trx->ts[obj_inst->ts_nr].nm_chan.mo;
 		break;
 	case NM_OC_SITE_MANAGER:
 		mo = &bts->site_mgr.mo;

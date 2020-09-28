@@ -418,7 +418,7 @@ int bts_link_estab(struct gsm_bts *bts)
 		for (j = 0; j < ARRAY_SIZE(trx->ts); j++) {
 			struct gsm_bts_trx_ts *ts = &trx->ts[j];
 
-			oml_tx_state_changed(&ts->mo);
+			oml_tx_state_changed(&ts->nm_chan.mo);
 		}
 	}
 

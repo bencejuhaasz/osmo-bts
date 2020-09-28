@@ -48,6 +48,7 @@
 #include <osmo-bts/nm_bts_fsm.h>
 #include <osmo-bts/nm_radio_carrier_fsm.h>
 #include <osmo-bts/nm_bb_transc_fsm.h>
+#include <osmo-bts/nm_channel_fsm.h>
 
 #include "l1_if.h"
 #include "trx_if.h"
@@ -94,7 +95,6 @@ static void check_transceiver_availability_trx(struct trx_l1h *l1h, int avail)
 {
 	struct phy_instance *pinst = l1h->phy_inst;
 	struct gsm_bts_trx *trx = pinst->trx;
-	uint8_t tn;
 
 	/* HACK, we should change state when we receive first clock from
 	 * transceiver */
@@ -105,19 +105,9 @@ static void check_transceiver_availability_trx(struct trx_l1h *l1h, int avail)
 			osmo_fsm_inst_dispatch(trx->bb_transc.fi, NM_BBTRANSC_EV_SW_ACT, NULL);
 			pinst->u.osmotrx.sw_act_reported = true;
 		}
-
-		for (tn = 0; tn < TRX_NR_TS; tn++)
-			oml_mo_state_chg(&trx->ts[tn].mo, NM_OPSTATE_DISABLED,
-				(l1h->config.slotmask & (1 << tn)) ?
-					NM_AVSTATE_DEPENDENCY :
-					NM_AVSTATE_NOT_INSTALLED);
 	} else {
 		osmo_fsm_inst_dispatch(trx->rc.fi, NM_RCARRIER_EV_DISABLE, NULL);
 		osmo_fsm_inst_dispatch(trx->bb_transc.fi, NM_BBTRANSC_EV_DISABLE, NULL);
-
-		for (tn = 0; tn < TRX_NR_TS; tn++)
-			oml_mo_state_chg(&trx->ts[tn].mo, NM_OPSTATE_DISABLED,
-				NM_AVSTATE_OFF_LINE);
 	}
 }
 
@@ -606,6 +596,7 @@ int bts_model_opstart(struct gsm_bts *bts, struct gsm_abis_mo *mo,
 		      void *obj)
 {
 	struct gsm_bts_trx *trx;
+	struct gsm_bts_trx_ts *ts;
 	int rc;
 
 	switch (mo->obj_class) {
@@ -625,6 +616,9 @@ int bts_model_opstart(struct gsm_bts *bts, struct gsm_abis_mo *mo,
 		rc = osmo_fsm_inst_dispatch(trx->bb_transc.fi, NM_BBTRANSC_EV_OPSTART_ACK, NULL);
 		break;
 	case NM_OC_CHANNEL:
+		ts = (struct gsm_bts_trx_ts *) obj;
+		rc = osmo_fsm_inst_dispatch(ts->nm_chan.fi, NM_CHAN_EV_OPSTART_ACK, NULL);
+		break;
 	case NM_OC_GPRS_NSE:
 	case NM_OC_GPRS_CELL:
 	case NM_OC_GPRS_NSVC:

@@ -30,5 +30,6 @@ noinst_HEADERS = \
 	nm_bts_sm_fsm.h \
 	nm_bts_fsm.h \
 	nm_bb_transc_fsm.h \
+	nm_channel_fsm.h \
 	nm_radio_carrier_fsm.h \
 	$(NULL)

@@ -1041,7 +1041,7 @@ static void ts_dump_vty(struct vty *vty, const struct gsm_bts_trx_ts *ts)
 			ts->flags & TS_F_PDCH_ACTIVE ? "PDCH" : "TCH/F");
 	vty_out(vty, "%s", VTY_NEWLINE);
 	vty_out(vty, "  NM State: ");
-	net_dump_nmstate(vty, &ts->mo.nm_state);
+	net_dump_nmstate(vty, &ts->nm_chan.mo.nm_state);
 }
 
 DEFUN(show_ts,

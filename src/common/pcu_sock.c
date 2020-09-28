@@ -211,7 +211,7 @@ static void info_ind_fill_trx(struct gsm_pcu_if_info_trx *trx_info,
 	for (tn = 0; tn < 8; tn++) {
 		const struct gsm_bts_trx_ts *ts = &trx->ts[tn];
 
-		if (ts->mo.nm_state.operational != NM_OPSTATE_ENABLED)
+		if (ts->nm_chan.mo.nm_state.operational != NM_OPSTATE_ENABLED)
 			continue;
 		if (!ts_should_be_pdch(ts))
 			continue;
@@ -907,7 +907,7 @@ static void pcu_sock_close(struct pcu_sock_state *state)
 			break;
 		for (j = 0; j < 8; j++) {
 			ts = &trx->ts[j];
-			if (ts->mo.nm_state.operational == NM_OPSTATE_ENABLED
+			if (ts->nm_chan.mo.nm_state.operational == NM_OPSTATE_ENABLED
 			 && ts->pchan == GSM_PCHAN_PDCH) {
 				ts->lchan[0].rel_act_kind = LCHAN_REL_ACT_PCU;
 				l1sap_chan_rel(trx,

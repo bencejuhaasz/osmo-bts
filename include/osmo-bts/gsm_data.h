@@ -306,6 +306,13 @@ enum gsm_bts_trx_ts_flags {
 			TS_F_PDCH_ACT_PENDING | TS_F_PDCH_DEACT_PENDING */
 };
 
+struct nm_chan {
+	/* NM Channel FSM */
+	struct osmo_fsm_inst *fi;
+	bool opstart_success; /* OPSTART went OK in lower layers and was acked */
+	struct gsm_abis_mo mo;
+};
+
 /* One Timeslot in a TRX */
 struct gsm_bts_trx_ts {
 	struct gsm_bts_trx *trx;
@@ -321,7 +328,7 @@ struct gsm_bts_trx_ts {
 	} dyn;
 
 	unsigned int flags;
-	struct gsm_abis_mo mo;
+	struct nm_chan nm_chan;
 	int tsc;		/* -1 == use BTS TSC */
 
 	/* Frequency hopping parameters (configured via OML) */

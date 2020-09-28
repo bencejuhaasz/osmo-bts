@@ -1274,9 +1274,6 @@ static int activate_rf_compl_cb(struct gsm_bts_trx *trx, struct msgb *resp,
 		/* signal availability */
 		osmo_fsm_inst_dispatch(trx->rc.fi, NM_RCARRIER_EV_SW_ACT, NULL);
 		osmo_fsm_inst_dispatch(trx->bb_transc.fi, NM_BBTRANSC_EV_SW_ACT, NULL);
-
-		for (i = 0; i < ARRAY_SIZE(trx->ts); i++)
-			oml_mo_state_chg(&trx->ts[i].mo, NM_OPSTATE_DISABLED, NM_AVSTATE_DEPENDENCY);
 	} else {
 		if (bts_lc15->led_ctrl_mode == LC15_LED_CONTROL_BTS)
 			bts_update_status(BTS_STATUS_RF_ACTIVE, 0);
