@@ -1621,7 +1621,7 @@ gsm_objclass2obj(struct gsm_bts *bts, uint8_t obj_class,
 		obj = &trx->ts[obj_inst->ts_nr];
 		break;
 	case NM_OC_SITE_MANAGER:
-		obj = &bts->site_mgr;
+		obj = bts;
 		break;
 	case NM_OC_GPRS_NSE:
 		obj = &bts->gprs.nse;

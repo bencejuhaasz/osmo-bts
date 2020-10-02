@@ -145,6 +145,9 @@ struct gsm_bts {
 	struct gsm_bts_trx *c0;
 
 	struct {
+		/* NM BTS Site Manager FSM */
+		struct osmo_fsm_inst *fi;
+		bool opstart_success;
 		struct gsm_abis_mo mo;
 	} site_mgr;
 
