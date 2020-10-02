@@ -28,4 +28,5 @@ noinst_HEADERS = \
 	dtx_dl_amr_fsm.h \
 	ta_control.h \
 	nm_bts_sm_fsm.h \
+	nm_bts_fsm.h \
 	$(NULL)

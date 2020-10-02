@@ -485,7 +485,7 @@ static int rsl_rx_paging_cmd(struct gsm_bts_trx *trx, struct msgb *msg)
 	if (rc < 0) {
 		/* FIXME: notfiy the BSC on other errors? */
 		if (rc == -ENOSPC) {
-			oml_tx_failure_event_rep(&trx->bts->mo, NM_SEVER_WARNING,
+			oml_tx_failure_event_rep(&trx->bts->nm.mo, NM_SEVER_WARNING,
 						 OSMO_EVT_MIN_PAG_TAB_FULL, "BTS paging table is full");
 		}
 	}

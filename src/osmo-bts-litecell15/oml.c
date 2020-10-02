@@ -43,6 +43,7 @@
 #include <osmo-bts/handover.h>
 #include <osmo-bts/l1sap.h>
 #include <osmo-bts/nm_bts_sm_fsm.h>
+#include <osmo-bts/nm_bts_fsm.h>
 
 #include "l1_if.h"
 #include "lc15bts.h"
@@ -1891,13 +1892,15 @@ int bts_model_opstart(struct gsm_bts *bts, struct gsm_abis_mo *mo,
 	case NM_OC_SITE_MANAGER:
 		rc = osmo_fsm_inst_dispatch(bts->site_mgr.fi, NM_BTS_SM_EV_OPSTART_ACK, NULL);
 		break;
+	case NM_OC_BTS:
+		rc = osmo_fsm_inst_dispatch(bts->nm.fi, NM_BTS_EV_OPSTART_ACK, NULL);
+		break;
 	case NM_OC_RADIO_CARRIER:
 		rc = trx_init(obj);
 		break;
 	case NM_OC_CHANNEL:
 		rc = ts_opstart(obj);
 		break;
-	case NM_OC_BTS:
 	case NM_OC_BASEB_TRANSC:
 	case NM_OC_GPRS_NSE:
 	case NM_OC_GPRS_CELL:
@@ -1905,7 +1908,7 @@ int bts_model_opstart(struct gsm_bts *bts, struct gsm_abis_mo *mo,
 		oml_mo_state_chg(mo, NM_OPSTATE_ENABLED, -1);
 		rc = oml_mo_opstart_ack(mo);
 		if (mo->obj_class == NM_OC_BTS) {
-			oml_mo_state_chg(&bts->mo, -1, NM_AVSTATE_OK);
+			oml_mo_state_chg(&bts->nm.mo, -1, NM_AVSTATE_OK);
 			oml_mo_state_chg(&bts->gprs.nse.mo, -1, NM_AVSTATE_OK);
 			oml_mo_state_chg(&bts->gprs.cell.mo, -1, NM_AVSTATE_OK);
 			oml_mo_state_chg(&bts->gprs.nsvc[0].mo, -1, NM_AVSTATE_OK);

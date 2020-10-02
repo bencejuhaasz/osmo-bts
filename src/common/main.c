@@ -186,7 +186,7 @@ static void signal_handler(int signal)
 	case SIGINT:
 	case SIGTERM:
 		if (!quit) {
-			oml_tx_failure_event_rep(&bts->mo,
+			oml_tx_failure_event_rep(&bts->nm.mo,
 						 NM_SEVER_CRITICAL, OSMO_EVT_CRIT_PROC_STOP,
 						 "BTS: SIGINT received -> shutdown");
 			bts_shutdown(bts, "SIGINT");

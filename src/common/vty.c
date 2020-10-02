@@ -872,7 +872,7 @@ static void bts_dump_vty(struct vty *vty, const struct gsm_bts *bts)
 			bts->oml_link ? bts->oml_link->tei : 0x00,
 			VTY_NEWLINE);
 	vty_out(vty, "  NM State: ");
-	net_dump_nmstate(vty, &bts->mo.nm_state);
+	net_dump_nmstate(vty, &bts->nm.mo.nm_state);
 	vty_out(vty, "  Site Mgr NM State: ");
 	net_dump_nmstate(vty, &bts->site_mgr.mo.nm_state);
 	if (strnlen(bts->pcu_version, MAX_VERSION_LENGTH))
@@ -958,7 +958,7 @@ DEFUN(test_send_failure_event_report, test_send_failure_event_report_cmd, "test 
 	}
 
 	bts = gsm_bts_num(net, bts_nr);
-	oml_tx_failure_event_rep(&bts->mo, NM_SEVER_MINOR, OSMO_EVT_WARN_SW_WARN, "test message sent from VTY");
+	oml_tx_failure_event_rep(&bts->nm.mo, NM_SEVER_MINOR, OSMO_EVT_WARN_SW_WARN, "test message sent from VTY");
 
 	return CMD_SUCCESS;
 }

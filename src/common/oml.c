@@ -544,7 +544,7 @@ static int oml_rx_set_bts_attr(struct gsm_bts *bts, struct msgb *msg)
 
 	rc = oml_tlv_parse(&tp, foh->data, msgb_l3len(msg) - sizeof(*foh));
 	if (rc < 0) {
-		oml_tx_failure_event_rep(&bts->mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UNSUP_ATTR,
+		oml_tx_failure_event_rep(&bts->nm.mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UNSUP_ATTR,
 					 "New value for Attribute not supported");
 		return oml_fom_ack_nack(msg, NM_NACK_INCORR_STRUCT);
 	}
@@ -553,7 +553,7 @@ static int oml_rx_set_bts_attr(struct gsm_bts *bts, struct msgb *msg)
 	if (TLVP_PRES_LEN(&tp, NM_ATT_BCCH_ARFCN, 2)) {
 		uint16_t arfcn = ntohs(tlvp_val16_unal(&tp, NM_ATT_BCCH_ARFCN));
 		if (arfcn >= 1024) { /* 0 .. 1023 (1024 channels total) */
-			oml_tx_failure_event_rep(&bts->mo, NM_SEVER_MAJOR, OSMO_EVT_WARN_SW_WARN,
+			oml_tx_failure_event_rep(&bts->nm.mo, NM_SEVER_MAJOR, OSMO_EVT_WARN_SW_WARN,
 						 "Given ARFCN %u is not supported",
 						 arfcn);
 			LOGPFOH(DOML, LOGL_ERROR, foh, "Given ARFCN %u is not supported.\n", arfcn);
@@ -562,26 +562,26 @@ static int oml_rx_set_bts_attr(struct gsm_bts *bts, struct msgb *msg)
 	}
 	/* 9.4.52 Starting Time */
 	if (TLVP_PRESENT(&tp, NM_ATT_START_TIME)) {
-		oml_tx_failure_event_rep(&bts->mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UNSUP_ATTR,
+		oml_tx_failure_event_rep(&bts->nm.mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UNSUP_ATTR,
 					 "NM_ATT_START_TIME Attribute not "
 					 "supported");
 		return oml_fom_ack_nack(msg, NM_NACK_SPEC_IMPL_NOTSUPP);
 	}
 
 	/* merge existing BTS attributes with new attributes */
-	tp_merged = osmo_tlvp_copy(bts->mo.nm_attr, bts);
+	tp_merged = osmo_tlvp_copy(bts->nm.mo.nm_attr, bts);
 	osmo_tlvp_merge(tp_merged, &tp);
 
 	/* Ask BTS driver to validate new merged attributes */
-	rc = bts_model_check_oml(bts, foh->msg_type, bts->mo.nm_attr, tp_merged, bts);
+	rc = bts_model_check_oml(bts, foh->msg_type, bts->nm.mo.nm_attr, tp_merged, bts);
 	if (rc < 0) {
 		talloc_free(tp_merged);
 		return oml_fom_ack_nack(msg, -rc);
 	}
 
 	/* Success: replace old BTS attributes with new */
-	talloc_free(bts->mo.nm_attr);
-	bts->mo.nm_attr = tp_merged;
+	talloc_free(bts->nm.mo.nm_attr);
+	bts->nm.mo.nm_attr = tp_merged;
 
 	/* ... and actually still parse them */
 
@@ -776,7 +776,7 @@ static int oml_rx_set_radio_attr(struct gsm_bts_trx *trx, struct msgb *msg)
 		arfcn = ntohs(_value);
 		value += 2;
 		if (arfcn >= 1024) { /* 0 .. 1023 (1024 channels total) */
-			oml_tx_failure_event_rep(&trx->bts->mo, NM_SEVER_MAJOR, OSMO_EVT_WARN_SW_WARN,
+			oml_tx_failure_event_rep(&trx->bts->nm.mo, NM_SEVER_MAJOR, OSMO_EVT_WARN_SW_WARN,
 						 "Given ARFCN %u is unsupported", arfcn);
 			LOGPFOH(DOML, LOGL_NOTICE, foh, "Given ARFCN %u is unsupported.\n", arfcn);
 			return oml_fom_ack_nack(msg, NM_NACK_FREQ_NOTAVAIL);
@@ -1052,7 +1052,7 @@ static int oml_rx_chg_adm_state(struct gsm_bts *bts, struct msgb *msg)
 static inline bool report_bts_number_incorrect(struct gsm_bts *bts, const struct abis_om_fom_hdr *foh, bool is_formatted)
 {
 	struct gsm_bts_trx *trx;
-	const struct gsm_abis_mo *mo = &bts->mo;
+	const struct gsm_abis_mo *mo = &bts->nm.mo;
 	const char *form = is_formatted ?
 		"Unexpected BTS %d in formatted O&M %s (exp. 0 or 0xFF)" :
 		"Unexpected BTS %d in manufacturer O&M %s (exp. 0 or 0xFF)";
@@ -1076,7 +1076,7 @@ static int down_fom(struct gsm_bts *bts, struct msgb *msg)
 	struct abis_om_hdr *oh = msgb_l2(msg);
 	struct abis_om_fom_hdr *foh = msgb_l3(msg);
 	struct gsm_bts_trx *trx;
-	const struct gsm_abis_mo *mo = &bts->mo;
+	const struct gsm_abis_mo *mo = &bts->nm.mo;
 	int ret;
 
 	if (msgb_l2len(msg) < sizeof(*foh)) {
@@ -1375,7 +1375,7 @@ static int rx_oml_ipa_rsl_connect(struct gsm_bts_trx *trx, struct msgb *msg,
 static int down_mom(struct gsm_bts *bts, struct msgb *msg)
 {
 	struct abis_om_hdr *oh = msgb_l2(msg);
-	const struct gsm_abis_mo *mo = &bts->mo;
+	const struct gsm_abis_mo *mo = &bts->nm.mo;
 	struct abis_om_fom_hdr *foh;
 	struct gsm_bts_trx *trx;
 	uint8_t idstrlen = oh->data[0];
@@ -1383,13 +1383,13 @@ static int down_mom(struct gsm_bts *bts, struct msgb *msg)
 	int ret;
 
 	if (msgb_l2len(msg) < sizeof(*foh)) {
-		oml_tx_failure_event_rep(&bts->mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UKWN_MSG,
+		oml_tx_failure_event_rep(&bts->nm.mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UKWN_MSG,
 					 "Manufacturer O&M message too short\n");
 		return -EIO;
 	}
 
 	if (strncmp((char *)&oh->data[1], abis_nm_ipa_magic, idstrlen)) {
-		oml_tx_failure_event_rep(&bts->mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UKWN_MSG,
+		oml_tx_failure_event_rep(&bts->nm.mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UKWN_MSG,
 					 "Manufacturer OML message != ipaccess not supported\n");
 		return -EINVAL;
 	}
@@ -1443,7 +1443,7 @@ int down_oml(struct gsm_bts *bts, struct msgb *msg)
 	int ret = 0;
 
 	if (msgb_l2len(msg) < sizeof(*oh)) {
-		oml_tx_failure_event_rep(&bts->mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UKWN_MSG,
+		oml_tx_failure_event_rep(&bts->nm.mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UKWN_MSG,
 					 "OML message too short\n");
 		msgb_free(msg);
 		return -EIO;
@@ -1452,14 +1452,14 @@ int down_oml(struct gsm_bts *bts, struct msgb *msg)
 
 	/* We don't implement de-segmentation of segmented OML messages */
 	if (oh->placement != ABIS_OM_PLACEMENT_ONLY || oh->sequence != 0) {
-		oml_tx_failure_event_rep(&bts->mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UKWN_MSG,
+		oml_tx_failure_event_rep(&bts->nm.mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UKWN_MSG,
 					 "Unsupported segmented O&M message\n");
 		msgb_free(msg);
 		return -EIO;
 	}
 
 	if (msgb_l3len(msg) < oh->length) {
-		oml_tx_failure_event_rep(&bts->mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UKWN_MSG,
+		oml_tx_failure_event_rep(&bts->nm.mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UKWN_MSG,
 					 "Short OML message: %u < %u\n",
 					 msgb_l3len(msg), oh->length);
 		msgb_free(msg);
@@ -1469,7 +1469,7 @@ int down_oml(struct gsm_bts *bts, struct msgb *msg)
 	switch (oh->mdisc) {
 	case ABIS_OM_MDISC_FOM:
 		if (msgb_l2len(msg) < sizeof(*oh)) {
-			oml_tx_failure_event_rep(&bts->mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UKWN_MSG,
+			oml_tx_failure_event_rep(&bts->nm.mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UKWN_MSG,
 						"Formatted O&M message too short\n");
 			ret = -EIO;
 			break;
@@ -1478,7 +1478,7 @@ int down_oml(struct gsm_bts *bts, struct msgb *msg)
 		break;
 	case ABIS_OM_MDISC_MANUF:
 		if (msgb_l2len(msg) < sizeof(*oh)) {
-			oml_tx_failure_event_rep(&bts->mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UKWN_MSG,
+			oml_tx_failure_event_rep(&bts->nm.mo, NM_SEVER_MAJOR, OSMO_EVT_MAJ_UKWN_MSG,
 						"Manufacturer O&M message too short\n");
 			ret = -EIO;
 			break;
@@ -1486,7 +1486,7 @@ int down_oml(struct gsm_bts *bts, struct msgb *msg)
 		ret = down_mom(bts, msg);
 		break;
 	default:
-		oml_tx_failure_event_rep(&bts->mo, NM_SEVER_MINOR, OSMO_EVT_MAJ_UKWN_MSG,
+		oml_tx_failure_event_rep(&bts->nm.mo, NM_SEVER_MINOR, OSMO_EVT_MAJ_UKWN_MSG,
 					 "unknown O&M msg_disc 0x%02x\n", oh->mdisc);
 		ret = -EINVAL;
 	}
@@ -1496,7 +1496,7 @@ int down_oml(struct gsm_bts *bts, struct msgb *msg)
 	return ret;
 }
 
-int oml_init(struct gsm_abis_mo *mo)
+int oml_init()
 {
 	DEBUGP(DOML, "Initializing OML attribute definitions\n");
 	tlv_def_patch(&abis_nm_att_tlvdef_ipa_local, &abis_nm_att_tlvdef_ipa);
@@ -1528,7 +1528,7 @@ gsm_objclass2mo(struct gsm_bts *bts, uint8_t obj_class,
 
 	switch (obj_class) {
 	case NM_OC_BTS:
-		mo = &bts->mo;
+		mo = &bts->nm.mo;
 		break;
 	case NM_OC_RADIO_CARRIER:
 		if (obj_inst->trx_nr >= bts->num_trx) {

@@ -684,7 +684,7 @@ static int set_oc2g_oml_alert(struct ctrl_cmd *cmd, void *data)
 	int cause = atoi(cmd->value);
 	char *saveptr = NULL;
 
-	alarm_sig_data.mo = &bts->mo;
+	alarm_sig_data.mo = &bts->nm.mo;
 	cause = atoi(strtok_r(cmd->value, ",",  &saveptr));
 	alarm_sig_data.event_serverity = (cause >> 8) & 0x0F;
 	alarm_sig_data.add_text = strtok_r(NULL, "\n",  &saveptr);
@@ -706,7 +706,7 @@ static int set_oc2g_oml_ceased(struct ctrl_cmd *cmd, void *data)
 	int cause = atoi(cmd->value);
 	char *saveptr = NULL;
 
-	alarm_sig_data.mo = &bts->mo;
+	alarm_sig_data.mo = &bts->nm.mo;
 	cause = atoi(strtok_r(cmd->value, ",",  &saveptr));
 	alarm_sig_data.add_text = strtok_r(NULL, "\n",  &saveptr);
 	memcpy(alarm_sig_data.spare, &cause, sizeof(int));
