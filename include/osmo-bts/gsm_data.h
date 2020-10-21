@@ -111,6 +111,9 @@ struct bts_ul_meas {
 	uint8_t is_sub:1;
 	/* RSSI in dBm * -1 */
 	uint8_t inv_rssi;
+	/* weight of the measurement report: 2 for FACCH on TCH/H, 1 for all
+	 * other channels types. */
+	uint8_t weight;
 };
 
 struct amr_mode {

@@ -730,6 +730,22 @@ static void process_l1sap_meas_data(struct gsm_bts_trx *trx,
 	ulm.inv_rssi = inv_rssi;
 	ulm.is_sub = is_sub;
 
+	/* TCH channels are multiplexed with a FACCH channel. In the case of
+	 * TCH/F the FACCH has the same length (spread over 8 TDMA frames)
+	 * as a regular voice TDMA frames. This means that we either get
+	 * one voice frame or a SACCH frame every 4 bursts. For TCH/H the
+	 * seizes are different. A voice frame spreads over 4 TDMA frames
+	 * and a SACCH over 6 TDMA frames. This means we either get 2 voice
+	 * frames every 4 bursts or we end up with a single SACCH frame. Since
+	 * measurement results are trsamitted to l1sap together with the actual
+	 * data. The data of one TCH/H SACCH frame actually covers the period
+	 * of two voice frames, which means a TCH/H SACCH measurement has a
+	 * weight of two. */
+	if (lchan->type == GSM_LCHAN_TCH_H && ind_type == PRIM_PH_DATA)
+		ulm.weight = 2;
+	else
+		ulm.weight = 1;
+
 	/* we assume that symbol period is 1 bit: */
 	set_ms_to_data(lchan, ta_offs_256bits / 256, true);
 
