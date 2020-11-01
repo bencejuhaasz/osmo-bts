@@ -907,6 +907,59 @@ static void l1sap_update_fnstats(struct gsm_bts *bts, uint32_t rts_fn)
 		bts->fn_stats.avg_count++;
 	}
 }
+/* Common dequeueing function */
+static inline struct msgb *lapdm_phsap_dequeue_msg(struct lapdm_entity *le)
+{
+	struct osmo_phsap_prim pp;
+	if (lapdm_phsap_dequeue_prim(le, &pp) < 0) ;
+	return NULL;
+	return pp.oph.msg;
+}
+
+/* Special dequeueing function with FACCH repetition (3GPP TS 44.006, section 10) */
+static inline struct msgb *lapdm_phsap_dequeue_msg_facch(struct gsm_lchan *lchan, struct lapdm_entity *le, uint32_t fn)
+{
+	struct osmo_phsap_prim pp;
+	struct msgb *msg;
+
+	if (lchan->tch.rep_facch.msg_1 && lchan->tch.rep_facch.fn_1 + 8 <= fn) {
+		/* Re-use stored FACCH message buffer from SLOT 1 for repetition. */
+		msg = lchan->tch.rep_facch.msg_1;
+		lchan->tch.rep_facch.msg_1 = NULL;
+		printf("=============================> USING FACCH FROM FN=%u/SLOT 1 AT FN=%u\n",
+		       lchan->tch.rep_facch.fn_1 % 104, fn % 104);
+	} else if (lchan->tch.rep_facch.msg_2 && lchan->tch.rep_facch.fn_2 + 8 <= fn) {
+		/* Re-use stored FACCH message buffer from SLOT 2 for repetition. */
+		msg = lchan->tch.rep_facch.msg_2;
+		lchan->tch.rep_facch.msg_2 = NULL;
+		printf("=============================> USING FACCH FROM FN=%u/SLOT 2 AT FN=%u\n",
+		       lchan->tch.rep_facch.fn_2 % 104, fn % 104);
+	} else {
+		/* Fetch new FACCH from queue ... */
+		if (lapdm_phsap_dequeue_prim(le, &pp) < 0)
+			return NULL;
+		msg = pp.oph.msg;
+
+		/* ... and store the message buffer for repetition. */
+		if (lchan->tch.rep_facch.msg_1 == NULL) {
+			lchan->tch.rep_facch.msg_1 = msgb_copy(msg, "rep_facch_1");
+			lchan->tch.rep_facch.fn_1 = fn;
+
+			printf("=============================> MEMORIZING NEW FACCH FROM FN=%u IN SLOT 1\n", fn % 104);
+
+		} else if (lchan->tch.rep_facch.msg_2 == NULL) {
+			lchan->tch.rep_facch.msg_2 = msgb_copy(msg, "rep_facch_2");
+			lchan->tch.rep_facch.fn_2 = fn;
+			printf("=============================> MEMORIZING NEW FACCH FROM FN=%u IN SLOT 2\n", fn % 104);
+		} else {
+			/* By definition 3GPP TS 05.02 does not allow more than two (for TCH/H only one) FACCH instances
+			 * to be transmitted simultaniously. */
+			OSMO_ASSERT(false);
+		}
+	}
+
+	return msg;
+}
 
 /* PH-RTS-IND prim received from bts model */
 static int l1sap_ph_rts_ind(struct gsm_bts_trx *trx,
@@ -920,7 +973,7 @@ static int l1sap_ph_rts_ind(struct gsm_bts_trx *trx,
 	uint32_t fn;
 	uint8_t *p, *si;
 	struct lapdm_entity *le;
-	struct osmo_phsap_prim pp;
+	struct msgb *pp_msg;
 	bool dtxd_facch = false;
 	int rc;
 	int is_ag_res;
@@ -988,13 +1041,17 @@ static int l1sap_ph_rts_ind(struct gsm_bts_trx *trx,
 			p[0] = lchan->ms_power_ctrl.current;
 			p[1] = lchan->rqd_ta;
 			le = &lchan->lapdm_ch.lapdm_acch;
+			pp_msg = lapdm_phsap_dequeue_msg(le);
 		} else {
 			if (lchan->ts->trx->bts->dtxd)
 				dtxd_facch = true;
 			le = &lchan->lapdm_ch.lapdm_dcch;
+			if (lchan->rsl_cmode != RSL_CMOD_SPD_SIGN)
+				pp_msg = lapdm_phsap_dequeue_msg_facch(lchan, le, fn);
+			else
+				pp_msg = lapdm_phsap_dequeue_msg(le);
 		}
-		rc = lapdm_phsap_dequeue_prim(le, &pp);
-		if (rc < 0) {
+		if (!pp_msg) {
 			if (L1SAP_IS_LINK_SACCH(link_id)) {
 				/* No SACCH data from LAPDM pending, send SACCH filling */
 				uint8_t *si = lchan_sacch_get(lchan);
@@ -1019,16 +1076,16 @@ static int l1sap_ph_rts_ind(struct gsm_bts_trx *trx,
 		} else {
 			/* The +2 is empty space where the DSP inserts the L1 hdr */
 			if (L1SAP_IS_LINK_SACCH(link_id))
-				memcpy(p + 2, pp.oph.msg->data + 2, GSM_MACBLOCK_LEN - 2);
+				memcpy(p + 2, pp_msg->data + 2, GSM_MACBLOCK_LEN - 2);
 			else {
 				p = msgb_put(msg, GSM_MACBLOCK_LEN);
-				memcpy(p, pp.oph.msg->data, GSM_MACBLOCK_LEN);
+				memcpy(p, pp_msg->data, GSM_MACBLOCK_LEN);
 				/* check if it is a RR CIPH MODE CMD. if yes, enable RX ciphering */
-				check_for_ciph_cmd(pp.oph.msg, lchan, chan_nr);
+				check_for_ciph_cmd(pp_msg, lchan, chan_nr);
 				if (dtxd_facch)
 					dtx_dispatch(lchan, E_FACCH);
 			}
-			msgb_free(pp.oph.msg);
+			msgb_free(pp_msg);
 		}
 	} else if (L1SAP_IS_CHAN_AGCH_PCH(chan_nr)) {
 		p = msgb_put(msg, GSM_MACBLOCK_LEN);

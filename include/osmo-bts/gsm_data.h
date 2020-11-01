@@ -256,6 +256,17 @@ struct gsm_lchan {
 		} dtx;
 		uint8_t last_cmr;
 		uint32_t last_fn;
+
+		struct {
+			/* SLOT #1 */
+			struct msgb *msg_1;
+			uint32_t fn_1;
+
+			/* SLOT #2 */
+			struct msgb *msg_2;
+			uint32_t fn_2;
+		} rep_facch;
+
 	} tch;
 
 	/* 3GPP TS 48.058 § 9.3.37: [0; 255] ok, -1 means invalid*/
