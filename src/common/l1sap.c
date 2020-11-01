@@ -911,8 +911,8 @@ static void l1sap_update_fnstats(struct gsm_bts *bts, uint32_t rts_fn)
 static inline struct msgb *lapdm_phsap_dequeue_msg(struct lapdm_entity *le)
 {
 	struct osmo_phsap_prim pp;
-	if (lapdm_phsap_dequeue_prim(le, &pp) < 0) ;
-	return NULL;
+	if (lapdm_phsap_dequeue_prim(le, &pp) < 0)
+		return NULL;
 	return pp.oph.msg;
 }
 
