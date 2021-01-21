@@ -6,7 +6,7 @@
 
 #define PCU_SOCK_DEFAULT	"/tmp/pcu_bts"
 
-#define PCU_IF_VERSION		0x0a
+#define PCU_IF_VERSION		0x0b
 #define TXT_MAX_LEN	128
 
 /* msg_type */
@@ -175,6 +175,13 @@ struct gsm_pcu_if_info_ind {
 		struct in_addr v4;
 		struct in6_addr v6;
 	} remote_ip[2];
+	/* RIM */
+	uint8_t         si1[GSM_MACBLOCK_LEN];
+	uint8_t         si1_is_set;
+	uint8_t         si3[GSM_MACBLOCK_LEN];
+	uint8_t         si3_is_set;
+	uint8_t         si13[GSM_MACBLOCK_LEN];
+	uint8_t         si13_is_set;
 } __attribute__ ((packed));
 
 struct gsm_pcu_if_act_req {

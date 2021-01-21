@@ -1,1 +1,2 @@
 * update osmo-gsm-manuals dependency to > 0.3.0 for vty_cpu_sched.adoc include.
+* increment PCUIF version number

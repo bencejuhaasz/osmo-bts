@@ -348,6 +348,23 @@ int pcu_tx_info_ind(void)
 		}
 	}
 
+	/* RIM */
+	if (GSM_BTS_HAS_SI(bts, SYSINFO_TYPE_1)) {
+		memcpy(info_ind->si1, GSM_BTS_SI(bts, SYSINFO_TYPE_1),
+		       sizeof(info_ind->si1));
+		info_ind->si1_is_set = true;
+	}
+	if (GSM_BTS_HAS_SI(bts, SYSINFO_TYPE_3)) {
+		memcpy(info_ind->si3, GSM_BTS_SI(bts, SYSINFO_TYPE_3),
+		       sizeof(info_ind->si3));
+		info_ind->si3_is_set = true;
+	}
+	if (GSM_BTS_HAS_SI(bts, SYSINFO_TYPE_13)) {
+		memcpy(info_ind->si13, GSM_BTS_SI(bts, SYSINFO_TYPE_13),
+		       sizeof(info_ind->si13));
+		info_ind->si13_is_set = true;
+	}
+
 	llist_for_each_entry(trx, &bts->trx_list, list) {
 		if (trx->nr >= ARRAY_SIZE(info_ind->trx)) {
 			LOGPTRX(trx, DPCU, LOGL_NOTICE, "PCU interface (version %u) "
