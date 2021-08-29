@@ -1278,6 +1278,23 @@ int _sched_rts(const struct l1sched_ts *l1ts, uint32_t fn)
 	return func(l1ts, &dbr);
 }
 
+static void trx_sched_acch_overpower(const struct gsm_lchan *lchan,
+				     struct trx_dl_burst_req *br)
+{
+	const struct trx_chan_desc *desc = &trx_chan_desc[br->chan];
+	const uint8_t overpower_db = lchan->bs_acch_overpower_db;
+
+	if (overpower_db == 0)
+		return;
+
+	if (desc->link_id == LID_SACCH || br->flags & TRX_BR_F_FACCH) {
+		if (br->att > overpower_db)
+			br->att -= overpower_db;
+		else
+			br->att = 0;
+	}
+}
+
 /* process downlink burst */
 void _sched_dl_burst(struct l1sched_ts *l1ts, struct trx_dl_burst_req *br)
 {
@@ -1316,9 +1333,11 @@ void _sched_dl_burst(struct l1sched_ts *l1ts, struct trx_dl_burst_req *br)
 	br->mod = l1cs->dl_mod_type;
 
 	/* BS Power reduction (in dB) per logical channel */
-	if (l1cs->lchan != NULL)
+	if (l1cs->lchan != NULL) {
 		br->att = l1cs->lchan->bs_power_ctrl.current;
-	else /* Ensure no attenuation in the absence of lchan (e.g. on PDCH) */
+		/* Temporary Overpower for SACCH/FACCH bursts */
+		trx_sched_acch_overpower(l1cs->lchan, br);
+	} else /* Ensure no attenuation in the absence of lchan (e.g. on PDCH) */
 		br->att = 0;
 
 	/* encrypt */
