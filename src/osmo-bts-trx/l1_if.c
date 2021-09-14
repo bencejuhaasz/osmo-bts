@@ -217,7 +217,7 @@ void bts_model_trx_close(struct gsm_bts_trx *trx)
 /* on RSL failure, deactivate transceiver */
 void bts_model_abis_close(struct gsm_bts *bts)
 {
-	bts_shutdown(bts, "Abis close");
+	bts_shutdown_ext(bts, "Abis close", false);
 }
 
 int bts_model_adjst_ms_pwr(struct gsm_lchan *lchan)
