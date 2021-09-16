@@ -361,10 +361,6 @@ int bts_init(struct gsm_bts *bts)
 	bts->radio_link_timeout.oml = 32;
 	bts->radio_link_timeout.current = bts->radio_link_timeout.oml;
 
-	/* Start with the site manager */
-	oml_mo_state_init(&bts->site_mgr.mo, NM_OPSTATE_DISABLED, NM_AVSTATE_NOT_INSTALLED);
-	oml_mo_state_init(&bts->mo, NM_OPSTATE_DISABLED, NM_AVSTATE_NOT_INSTALLED);
-
 	/* set BTS attr to dependency */
 	oml_mo_state_init(&bts->gprs.nse.mo, NM_OPSTATE_DISABLED, NM_AVSTATE_DEPENDENCY);
 	oml_mo_state_init(&bts->gprs.cell.mo, NM_OPSTATE_DISABLED, NM_AVSTATE_DEPENDENCY);
@@ -424,7 +420,7 @@ int bts_init(struct gsm_bts *bts)
 /* main link is established, send status report */
 int bts_link_estab(struct gsm_bts *bts)
 {
-	int i, j;
+	int i;
 
 	LOGP(DSUM, LOGL_INFO, "Main link established, sending NM Status.\n");
 
@@ -442,14 +438,9 @@ int bts_link_estab(struct gsm_bts *bts)
 	for (i = 0; i < bts->num_trx; i++) {
 		struct gsm_bts_trx *trx = gsm_bts_trx_num(bts, i);
 
-		oml_tx_state_changed(&trx->mo);
-		oml_tx_state_changed(&trx->bb_transc.mo);
-
-		for (j = 0; j < ARRAY_SIZE(trx->ts); j++) {
-			struct gsm_bts_trx_ts *ts = &trx->ts[j];
-
-			oml_tx_state_changed(&ts->mo);
-		}
+		osmo_fsm_inst_dispatch(trx->mo.fi, NM_EV_SW_ACT, NULL);
+		/* bb_transc will "Install" its channels internally through NM_EV_BBTRANSC_INSTALLED */
+		osmo_fsm_inst_dispatch(trx->bb_transc.mo.fi, NM_EV_SW_ACT, NULL);
 	}
 
 	return bts_model_oml_estab(bts);
