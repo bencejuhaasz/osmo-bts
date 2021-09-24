@@ -306,7 +306,7 @@ int trx_if_cmd_setrxgain(struct trx_l1h *l1h, int db)
 /*! Send "NOMTXPOWER" command to TRX */
 int trx_if_cmd_getnompower(struct trx_l1h *l1h, trx_if_cmd_getnompower_cb *cb)
 {
-	return trx_ctrl_cmd_cb(l1h, 1, cb, "NOMTXPOWER", "");
+	return trx_ctrl_cmd_cb(l1h, 1, cb, "POWERON", "");
 }
 
 /*! Send "SETPOWER" command to TRX */
@@ -387,19 +387,19 @@ int trx_if_cmd_txtune(struct trx_l1h *l1h, uint16_t arfcn, trx_if_cmd_generic_cb
 /*! Send "HANDOVER" command to TRX: Enable handover RACH Detection on timeslot/sub-slot */
 int trx_if_cmd_handover(struct trx_l1h *l1h, uint8_t tn, uint8_t ss)
 {
-	return trx_ctrl_cmd(l1h, 1, "HANDOVER", "%d %d", tn, ss);
+	return trx_ctrl_cmd_cb(l1h, 1, cb, "POWERON", "");
 }
 
 /*! Send "NOHANDOVER" command to TRX: Disable handover RACH Detection on timeslot/sub-slot */
 int trx_if_cmd_nohandover(struct trx_l1h *l1h, uint8_t tn, uint8_t ss)
 {
-	return trx_ctrl_cmd(l1h, 1, "NOHANDOVER", "%d %d", tn, ss);
+	return trx_ctrl_cmd_cb(l1h, 1, cb, "POWERON", "");
 }
 
 /*! Send "RFMUTE" command to TRX: Mute or Unmute RF transmission */
 int trx_if_cmd_rfmute(struct trx_l1h *l1h, bool mute)
 {
-	return trx_ctrl_cmd(l1h, 0, "RFMUTE", mute ? "1" : "0");
+	return trx_ctrl_cmd_cb(l1h, 1, cb, "POWEROFF", "");
 }
 
 struct trx_ctrl_rsp {
